@@ -1,0 +1,10 @@
+---
+layout: page
+title: About
+---
+
+<p class="message">
+  우당탕탕 돌아가는 (개발) 공부 블로그 :>
+</p>
+
+
