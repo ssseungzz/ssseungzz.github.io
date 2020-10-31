@@ -26,11 +26,12 @@
     {% endfor %}
 
     <a class="sidebar-nav-item" href="{{ site.github.repo }}">GitHub project</a>
-    <div>
-  <div class="sidebar-nav-item">Category</div>
-  <nav class="content-ul">
-    {% for category in site.categories %}
-    <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}"
+  </nav>
+  <div>
+    <div class="sidebar-nav-item">Category</div>
+    <nav class="content-ul">
+      {% for category in site.categories %}
+      <a href="{{ root_url }}/{{ site.category_dir }}#{{ category | first }}"
        class="sidebar-nav-item pl-3rem">
                           <span class="name">
                               {{ category | first }}
@@ -40,7 +41,6 @@
     {% endfor %}
   </nav>
 </div>
-  </nav>
 
   <div class="sidebar-item">
     <p>
