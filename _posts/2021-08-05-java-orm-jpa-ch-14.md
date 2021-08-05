@@ -250,3 +250,168 @@ public class CatListener {
 
 ##### Named 엔티티 그래프
 
+```java
+@NamedEntityGraph(name = "Order.withMember", attributeNodes = {
+  @NamedAttributeNode("member")
+})
+@Entity
+@Table(name = "ORDERS")
+public class Order {
+  
+  @Id @GeneratedValue
+  @Column(name = "ORDER_ID")
+  private Long id;
+  
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "MEMBER_ID")
+  private Member member;
+  
+  //...
+}
+```
+
+* `@NamedEntityGraph`로 정의한다.
+  * `name`: 엔티티 그래프의 이름을 정의한다.
+  * `attributeNodes`: 함께 조회할 속성을 선택한다. 이때 `@NamedAttributeNode`를 사용하고 그 값으로 함께 조회할 속성을 선택한다.
+* 필드가 지연 로딩으로 설정되어 있더라도 엔티티 그래프에서 함께 조회할 속성으로 선택한 경우 함께 조회할 수 있다.
+  * 둘 이상을 정의하려면 `@NameEntityGraphs`를 사용하면 된다.
+
+##### em.find()에서 엔티티 그래프 사용
+
+* `Named` 엔티티 그래프를 사용하려면 정의한 엔티티 그래프를 `em.getEntityGraph({graph-name})`으로 찾아오면 된다. 
+* 엔티티 그래프는 JPA의 힌트 기능을 사용해서 동작하는데 힌트의 키로 `javax.persistence.fetchgraph`를 사용하고 힌트의 값으로 찾아온 엔티티 그래프를 사용하면 된다.
+
+```java
+EntityGraph graph = em.getEntityGraph("Order.withMember");
+
+Map hints = new HashMap();
+hints.put("javax.persistence.fetchgraph", graph);
+
+Order order = em.find(Order.class, orderId, hints);
+```
+
+##### subgraph
+
+* 필드의 필드까지 조회하기 위해서는 `subgraph`를 사용한다.
+
+````java
+@NamedEntityGraph(name = "Order.withAll", attributeNodes = {
+  @NamedAttributeNode("member"),
+  @NamedAttributeNode(value = "orderItems", subgraph = "orderItems")
+	},
+  subgraphs = @NameSubgraph(name = "orderItems", attributeNodes = {
+    @NamedAttributeNode("item")
+  })
+)
+@Entity
+@Table(name = "ORDERS")
+public class Order {
+  
+  @Id @GeneratedValue
+  @Column(name = "ORDER_ID")
+  private Long id;
+  
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "MEMBER_ID")
+  private Member member;
+  
+  @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+  private List<OrderItem> orderItems = new ArrayList<OrderItem>();
+  
+  //...
+}
+
+@Entity
+@Table(name = "ORDER_ITEM")
+public class OrderItem {
+  
+  @Id @GeneratedValue
+  @Column(name = "ORDER_ITEM_ID")
+  private Long id;
+  
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "ITEM_ID")
+  private Item item;
+  
+  // ...
+}
+````
+
+* `Order` → `OrderItem`은 `Member`의 경우와 마찬가지로 조회할 수 있다. 그런데 `OrderItem` → `Item` 객체 그래프는 `Order`의 객체 그래프가 아니므로 `subgraph` 속성으로 정의해야 한다.
+  * 이 속성은 `@NamedSubgraph`를 사용해서 서브 그래프를 정의한다.
+
+```java
+Map hints = new HashMap();
+hints.put("javax.persistence.fetchgraph", graph);
+
+Order order = em.find(Order.class, orderId, hints);
+```
+
+* 실행된 SQL에서는 엔티티 그래프에서 지정한 엔티티들을 함께 조회한다.
+
+```sql
+select o.*, m.*, oi.*, i.*
+from
+	ORDERS o
+inner join
+	Member m
+			 on o.MEMBER_ID=m.MEMBER_ID
+left outer join
+	ORDER_ITEM io
+			on o.ORDER_ID=oi.ORDER_ID
+left outer join
+	Item i
+			on oi.ITEM_ID=i.ITEM_ID
+where
+	 o.ORDER_ID=?
+```
+
+##### JPQL에서 엔티티 그래프 사용
+
+* `em.find`와 동일하게 힌트만 추가하면 된다.
+
+```java
+List<Order> resultList = 
+  em.createQuery("select o from Order o where o.id = :orderId", Order.class)
+  	.setParameter("orderId", orderId)
+  	.setHint("javax.persistence.fetchgraph", em.getEntityGraph("Order.withAll"))
+  	.getResultList();
+```
+
+* `em.find`에서 엔티티 그래프를 사용하면 하이버네이트는 필수 관계를 고려해서 SQL 내부 조인을 사용하지만 JPQL에서 엔티티 그래프를 사용할 때는 항상 SQL 외부 조인을 사용한다.
+
+##### 동적 엔티티 그래프
+
+* 엔티티 그래프를 동적으로 구성하려면 `createEntityGraph()` 메소드를 사용하면 된다.
+
+````java
+EntityGraph<Order> graph = em.createEntityGraph(Order.class);
+graph.addAttributeNodes("member");
+
+Map hints = new HashMap();
+hints.put("javax.persistence.fetchgraph", graph);
+
+Order order = em.find(Order.class, orderId, hints);
+````
+
+```java
+EntityGraph<Order> graph = em.createEntityGraph(Order.class);
+graph.addAttributeNodes("member");
+Subgraph<OrderItem> orderItems = graph.addSubgraph("orderItem");
+orderItems.addAttributeNodes("Item");
+
+Map hints = new HashMap();
+hints.put("javax.persistence.fetchgraph", graph);
+
+Order order = em.find(Order.class, orderId, hints);
+```
+
+##### 엔티티 그래프 정리
+
+* ROOT에서 시작
+  * 항상 조회하는 엔티티의 ROOT에서 시작해야 한다.
+* 이미 로딩된 엔티티
+  * 영속성 컨텍스트에 해당 엔티티가 이미 로딩되어 있으면 엔티티 그래프가 적용되지 않는다. (아직 초기화되지 않은 프록시에는 엔티티 그래프가 적용된다)
+* `fetchgraph`, `loadgraph` 차이
+  * 전자는 엔티티 그래프에 선택한 속성만 함께 조회한다. 
+  * 후자는 엔티티 그래프에 선택한 속성뿐만 아니라 글로벌 `fetch` 모드가 `FetchType.EAGER`로 설정된 연관관계도 포함해서 함께 조회한다.
