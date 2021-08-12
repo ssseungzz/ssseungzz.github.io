@@ -209,7 +209,7 @@ import java.util.Random
 // ...
 ```
 
-* 코틀린에서는 클래스 임포트와 함수 임포트에 차이가 없으며 모든 선언을 `import` ZLDNJEMFH RKWUDHF TN DLTEK.
+* 코틀린에서는 클래스 임포트와 함수 임포트에 차이가 없으며 모든 선언을 `import` 키워드로 가져올 수 있다.
 * `.*`로 패키지 안의 모든 선언을 임포트할 수 있다. 클래스뿐 아니라 최상위에 정의된 함수나 프로퍼티까지 불러온다.
 * 코틀린에서는 여러 클래스를 한 파일에 넣을 수 있고 파일의 이름도 마음대로 정할 수 있다.
   * 디스크상의 어떤 디렉터리에 소스코드 파일을 위치시키든 관계없다. 원하는 대로 소스코드를 구성할 수 있다.
@@ -219,3 +219,74 @@ import java.util.Random
 
 #### 2.3 선택 표현과 처리: enum과 when
 
+##### enum 클래스 정의
+
+```kotlin
+enum class Color {
+  RED, ORANGE, YELLOW, GREEN, BLUE, INDIGO, VIOLET
+}
+```
+
+* `enum`은 소프트 키워드로 `class` 앞에 있을 때는 특별한 의미를 지니지만 다른 곳에서는 이름에 사용할 수 있다.
+* `enum` 클래스 안에도 프로퍼티나 메소드를 정의할 수 있다.
+
+```kotlin
+enum class Color (
+  val r: Int, val g: Int, val b: Int
+) {
+  RED(255, 0, 0), ORANGE(255, 165, 0),
+  YELLOW(255, 255, 0), GREEN(0, 255, 0), BLUE(0, 0, 255),
+  INDIGO(75, 0, 130), VIOLET(238, 130, 238);
+  
+  fun rgb() = (r * 256 + g) * 256 + b
+}
+```
+
+* 일반적인 클래스와 마찬가지로 생성자와 프로퍼티를 선언한다.
+* 각 `enum` 상수를 정의할 때는 그 상수에 해당하는 프로퍼티 값을 지정해야만 한다. 
+  * 메소드를 정의하는 경우 반드시 `enum` 상수 목록과 메소드 정의 사이에 세미콜론을 넣어야 한다.
+
+##### when으로 enum 클래스 다루기
+
+* 자바의 `switch` 에 해당하는 코틀린 구성 요소는 `when`이다. 
+  * 값을 만들어내는 식이므로 식이 본문인 함수에 `when`을 바로 사용할 수 있다.
+
+```kotlin
+fun getMnemonic(color: Color) =
+	when (color) {
+    Color.RED -> "Richard"
+    Color.ORANGE -> "Of"
+    Color.YELLOW -> "York"
+    Color.GREEN -> "Gave"
+    Color.BLUE -> "Battle"
+    Color.INDIGO -> "In"
+    Color.VIOLET -> "Vain"
+  }
+```
+
+* 자바와 달리 각 분기의 끝에 `break`를 넣지 않아도 된다. 성공적으로 매치되는 분기를 찾으면 그 분기를 실행한다.
+* 한 분기 안에서 여러 값을 매치 패턴으로 사용할 수 있다. 그런 경우 값 사이를 콤마(`,`)로 분리한다.
+
+```kotlin
+fun getMnemonic(color: Color) =
+	when (color) {
+    Color.RED, Color.ORANGE, Color.YELLOW -> "warm"
+    Color.GREEN -> "neutral"
+    Color.BLUE, Color.INDIGO, Color.VIOLET -> "cold"
+  }
+/* ------------------------------------------------- */
+
+/* 상수 값을 임포트하면 더 간단하게 사용 가능하다.*/
+import ch02.colors.Color
+import ch02.colors.Color.*
+fun getMnemonic(color: Color) =
+	when (color) {
+    RED, ORANGE, YELLOW -> "warm"
+    GREEN -> "neutral"
+    BLUE, INDIGO, VIOLET -> "cold"
+  }
+```
+
+##### when과 임의의 객체를 함께 사용
+
+* `when`의 분기 조건은 임의의 객체를 허용한다.
