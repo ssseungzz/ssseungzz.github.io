@@ -290,3 +290,293 @@ fun getMnemonic(color: Color) =
 ##### when과 임의의 객체를 함께 사용
 
 * `when`의 분기 조건은 임의의 객체를 허용한다.
+
+````kotlin
+fun mix(c1: Color, c2: Color) =
+   when (setOf(c1, c2)) {
+     setOf(RED, YELLOW) -> ORANGE
+     setOf(YELLOW, BLUE) -> GREEN
+     setOf(BLUE, VIOLET) -> INDIGO
+     else -> throw Exception("dirty color")
+   }
+````
+
+* 코틀린 표준 라이브러리에는 인자로 전달받은 여러 객체를 그 객체들을 포함하는 `Set` 객체로 만드는 `setOf`라는 함수가 있다. 
+* `when` 식은 인자 값과 매치하는 조건 값을 찾을 때까지 각 분기를 검사한다.
+  * 여기서 `setOf(c1, c2)`와 분기 조건에 있는 객체 사이를 매치할 때 동등성을 사용한다. 
+  * 모든 분기 식에서 만족하는 조건을 찾을 수 없다면 `else` 분기의 문장을 계산한다.
+* `when`의 분기 조건 부분에 식을 넣을 수 있어 코드를 더 간결하게 작성할 수 있다. 
+
+##### 인자 없는 when 사용
+
+* 인자가 없는 `when` 을 사용하면 불필요한 객체 생성을 막을 수 있다.
+  * 아무 인자가 없으려면 각 분기의 조건이 불리언 결과를 계산하는 식이어야 한다.
+  * 가독성은 떨어지지만 성능은 향상시킬 수 있다.
+
+```kotlin
+fun mixOptimized(c1: Color, c2: Color) = 
+   when {
+     (c1 == RED && c2 == YELLOW) ||
+     (c1 == YELLOW && c2 == RED) -> ORANGE
+     (c1 == YELLOW && c2 == BLUE) ||
+     (c1 == BLUE && c2 == YELLOW) -> GREEN
+     (c1 == BLUE && c2 == VIOLET) ||
+     (c1 == VIOLET && c2 == BLUE) -> INDIGO
+     else -> throw Exception("dirty color")
+   }
+```
+
+##### 스마트 캐스트: 타입 검사와 타입 캐스트를 조합
+
+* 간단한 산술식을 계산하는 함수를 예시로 만들어 본다.
+  * 식을 트리 구조로 저장하자. 노드는 합계(`Sum`)나 수(`Num`) 중 하나다. 수(`Num`)는 항상 말단 노드지만 합계(`Sum`)는 자식이 둘 있는 중간 노드다. `Sum` 노드의 자식은 덧셈의 두 인자이다. 
+
+```kotlin
+interface Expr
+class Num(val value: Int) : Expr
+class Sum(val left: Expr, val right: Expr) : Expr
+```
+
+* 식을 위한 `Expr` 인터페이스가 있고, `Sum`과 `Num` 클래스는 인터페이스를 구현한다. 인터페이스는 아무 메소드도 선언하지 않으며 단지 공통 타입 역할만 수행한다. 클래스가 구현하는 인터페이스를 지정하기 위해서 콜론(`:`) 뒤에 인터페이스 이름을 사용한다.
+
+* (1 + 2) + 4라는 식은 `Sum(Sum(Num(1), Num(2)), Num(4))`로 표현될 수 있다. 식의 값은 어떻게 계산할까?
+
+  * `Expr` 인터페이스에는 두 가지 구현 클래스가 존재한다. 따라서 식을 평가하려면 두 가지 경우를 고려해야 한다.
+
+  1. 어떤 식이 수라면 그 값을 반환한다.
+  2. 어떤 식이 합계라면 좌항과 우항의 값을 계산한 다음 합한 값을 반환한다.
+
+* `if`를 써서 자바 스타일로 작성하면 다음과 같다.
+
+```kotlin
+fun eval(e: Expr) : Int {
+  if (e is Num) { // e를 Num으로 해석
+    val n = e as Num
+    return n.value
+  }
+  if (e is Sum) { // e를 Sum으로 해석
+    return eval(e.right) + eval(e.left)
+  }
+  throw IllegalArgumentException("unknown expression")
+}
+```
+
+* 코틀린에서는 `is`를 사용해 변수 타입을 검사한다.
+  * 프로그래머 대신 컴파일러가 캐스팅을 해 주므로 검사하고 나면 굳이 변수를 원하는 타입으로 캐스팅하지 않아도 처음부터 변수가 원하는 타입으로 선언된 것처럼 사용할 수 있다.
+  * 이를 **스마트 캐스트**라고 부른다.
+* 스마트 캐스트는 `is` 변수에 든 값의 타입을 검사한 다음에 그 값이 바뀔 수 없는 경우에만 작동한다.
+  * 클래스의 프로퍼티에 대해 사용한다면 그 프로퍼티는 반드시 `val`이어야 한다.
+  * 원하는 타입으로 명시적으로 캐스팅하려면 `as` 키워드를 사용한다.
+
+##### 리팩토링: if를 when으로 변경
+
+* `if`가 값을 만들어내므로 3항 연산자가 따로 없다. 이런 특성을 이용해 `if`식을 본문으로 사용해서 더 간단하게 만들 수 있다.
+
+```kotlin
+fun eval(e: Expr) : Int =
+   if (e is Num) {
+     e.value
+   } else if (e is Sum) {
+     eval (e.right) + eval(e.left)
+   } else {
+     throw IllegalArgumentException("unknown expression")
+   }
+```
+
+* `if`의 분기에 식이 하나밖에 없다면 중괄호를 생략해도 된다. 분기에 블록을 사용하는 경우 그 블록의 마지막 식이 그 분기의 결과 값이다.
+
+```kotlin
+fun eval(e: Expr) : Int =
+   when(e) {
+     is Num -> e.value
+     is Sum -> eval(e.right) + eval(e.left)
+     else -> throw IllegalArgumentException("unknown expression")
+   }
+```
+
+* 받은 값의 타입을 검사할 때에도 `when` 분기를 사용할 수 있다. 이 경우에도 역시 타입을 검사하고 나면 스마트 캐스트가 이뤄진다.
+
+##### if와 when의 분기에서 블록 사용
+
+* 각 분기에서 수행해야 하는 로직이 복잡해지면 분기 본문에 블록을 사용할 수 있다.
+* `if`나 `when` 모두 분기에 블록을 사용할 수 있고, 블록의 마지막 문장이 블록 전체의 결과가 된다.
+
+```kotlin
+fun evalWithLogging(e: Expr) : Int =
+   when(e) {
+     is Num -> {
+       println("num: ${e.value}")
+       e.value
+     } 
+     is Sum -> {
+       val left = evalWithLogging(e.left)
+       val right = evalWithLoggin(e.right)
+       println("sum: $left + $right")
+       left + right
+     } else -> throw IllegalArgumentException("unknown expression")
+   }
+```
+
+* 블록의 마지막 식이 블록의 결과라는 규칙은 블록이 값을 만들어내야 하는 경우 항상 성립한다. 이 규칙은 함수에 대해서는 성립하지 않는다.
+  * 식이 본문인 함수는 블록을 본문으로 가질 수 없고 블록이 본문인 함수는 내부에 `return` 문이 반드시 있어야 한다.
+
+
+
+#### 2.4 대상을 이터레이션: while과 for 루프
+
+##### 2.4.1 while 루프
+
+* `while`과 `do-while` 루프가 있는데, 문법은 자바와 같다.
+
+##### 2.4.2 수에 대한 이터레이션: 범위와 수열
+
+* 코틀린에서는 `for` 루프 대신 범위(`range`)를 사용한다.
+  * `..` 연산자로 시작 값과 끝 값을 연결해서 범위를 만든다. 코틀린의 범위는 폐구간 또는 양끝을 포함하는 구간이다.
+* 정수 범위로 수행할 수 있는 가장 단순한 작업은 범위에 속한 모든 값에 대한 이터레이션이다. 이런 식으로 범위에 속한 값을 일정한 순서로 이터레이션하는 경우를 수열(`progression`)이라고 부른다.
+
+```kotlin
+fun fizzBuzz(i: Int) = when {
+  i % 15 == 0 -> "FizzBuzz"
+  i % 3 == 0 -> "Fizz"
+  i % 5 == 0 -> "Buzz"
+  else -> "$i"
+}
+```
+```kotlin
+for(i in 1..100) { // 1부터 100까지의 정수에 대해 이터레이션
+  print(fizzBuzz(i))
+}
+```
+
+```kotlin
+fun (i in 100 downTo 1 step 2) {
+  print(fizzBuzz(i))
+}
+```
+
+* 여기서는 증가 값 `step`을 갖는 수열에 대해 이터레이션한다. 증가 값을 사용하면 수를 건너 뛸 수 있다. 음수로 만들면 역방향 수열을 만들 수 있다.
+  * 위의 예제에서 `100 downTo 1`은 역방향 수열을 만든다. 그 뒤에 `step 2`를 붙이면 증가 값의 절댓값이 2로 바뀐다.
+* 반만 닫힌 범위롤 만들고 싶은 경우 `until`을 사용한다.
+
+##### 맵에 대한 이터레이션
+
+```kotlin
+val binaryReps = TreeMap<Char, String>()
+
+for (c in 'A'..'F') {
+  val binary = Integer.toBinaryString(c.toInt())
+  binaryReps[c] = binary
+}
+
+for ((letter, binary) in binaryReps) {
+  println("$letter = $binary")
+}
+```
+
+* `..` 연산자를 숫자뿐 아니라 문자 타입의 값에도 적용할 수 있다.
+  * `for` 루프를 사용해 이터레이션하려는 컬렉션의 원소를 풀 수도 있다. 
+* 맵을 값을 가져오거나 키에 해당하는 값을 쉽게 설정 가능하다.
+* 맵에 사용했던 위와 같은 구조를 컬렉션에도 활용할 수 있다. 구조 분해 구문을 사용하면 원소의 현재 인덱스를 유지하면서 컬렉션을 이터레이션할 수 있다.
+
+```kotlin
+val list = arrayListOf("10", "11", "1001")
+for ((index, element) in list.withIndex()) {
+  println("$index: $element")
+}
+```
+
+##### in으로 컬렉션이나 범위의 원소 검사
+
+* `in` 연산자를 사용해 어떤 값이 범위에 속하는지 검사할 수 있다. 반대로 `!in`을 사용하면 어떤 값이 범위에 속하지 않는지 검사할 수 있다.
+
+```kotlin
+fun isLetter(c: Char) = c in 'a'..'z' || c in 'A'..'Z'
+fun isNotDigit(c: Char) = c !in '0'..'9'
+```
+
+* `when` 식에서의 활용도 가능하다.
+
+```kotlin
+fun recognize(c: Char) = when(c) {
+  in '0'..'9' -> "digit"
+  in 'a'..'z', in 'A'..'Z' -> "letter"
+  else -> "??"
+}
+```
+
+* 범위는 문자에만 국한되지 않고 비교 가능한 클래스라면 그 클래스의 인스턴스 객체를 사용해 범위를 만들 수 있다.
+  * `Comparable` 을 사용하는 범위의 경우 그 범위 내의 모든 객체를 항상 이터레이션하지는 못한다.
+  * 하지만 `in` 연산자를 사용하면 값이 범위 안에 속하는지 항상 결정할 수 있다.
+
+```kotlin
+println("kotlin" in "java".."scala") // "java" <= "kotlin" && "kotlin" <= "scala"
+```
+
+* 컬렉션에서도 사용 가능하다.
+
+
+
+#### 2.5 코틀린의 예외 처리
+
+* 코틀린의 예외 처리는 자바와 비슷하다.
+  * 함수는 정상적으로 종료할 수 있지만 오류가 발생하면 던질 수 있고, 함수를 호출하는 쪽에서는 예외를 잡아 처리할 수 있다. 발생한 예외를 함수 호출 단에서 처리하지 않으면 스택을 거슬러 올라가며 예외를 처리하는 부분이 나올 때까지 다시 던진다.
+
+```kotlin
+if (percentage !in 0..100) {
+  thrwo IllegalArgumentException("percentage value must be between 0 and 100")
+}
+```
+
+* 예외 인스턴스를 만들 때도 `new`를 붙일 필요가 없다. 코틀린의 `throw`는 식이므로 다른 식에 포함될 수 있다.
+
+##### 2.5.1 try, catch, finally
+
+```kotlin
+fun readNumber(reader: BufferedReader): Int? {
+  try {
+    val line = reader.readLine()
+    return Integer.parseInt(line)
+  }
+  catch (e: NumberFormatException) {
+    return null
+  }
+  finally {
+    reader.close()
+  }
+}
+```
+
+* 자바 코드와 가장 큰 차이는 `throws` 절이 코드에 없다.
+
+  * 자바에서는 함수를 작성할 때 함수 선언 뒤에 `throws IOException`을 붙여야 한다. 체크 예외를 명시적으로 처리해야 하기 때문이다. 어떤 함수가 던질 가능성이 있는 예외나 그 함수가 호출한 다른 함수에서 발생할 수 있는 예외를 모두 처리해야 하며, 처리하지 않은 예외는 `throws` 절에 명시해야 한다.
+
+  * 코틀린은 체크 예외와 언체크 예외를 구별하지 않는다. 실제 자바 프로그래머들은 의미 없이 예외를 다시 던지거나 예외를 잡되 처리하지는 않고 그냥 무시하는 코드를 작성하는 경우가 흔하므로 그러한 방식을 고려해 예외를 설계했다.
+
+##### try를 식으로 사용
+
+```kotlin
+fun readNumber(reader: BufferedReader): Int? {
+  val number = try {
+    Integer.parseInt(reader.readLine())
+  } catch (e: NumberFormatException) {
+    return
+  }
+  println(number)
+}
+```
+
+* `try` 키워드는 식이므로 값을 변수에 대입할 수 있다. 본문은 반드시 중괄호로 둘러싸야 한다. 다른 문장과 마찬가지로 `try`의 본문도 내부에 여러 문장이 있으면 마지막 식의 값이 전체 결과 값이다.
+  * `catch` 이후에도 계속 진행하고 싶다면 `catch` 블록도 값을 만들어야 한다. 마찬가지로 마지막 식이 블록 전체의 값이 된다.
+
+```kotlin
+fun readNumber(reader: BufferedReader): Int? {
+  val number = try {
+    Integer.parseInt(reader.readLine())
+  } catch (e: NumberFormatException) {
+    null
+  }
+  println(number)
+}
+```
+
+* `try` 코드 블록의 실행이 정상적으로 끝나면 그 블록의 마지막 식의 값이 결과다. 예외가 발생하고 잡히면 그 예외에 해당하는  `catch` 블록의 값이 결과다.
