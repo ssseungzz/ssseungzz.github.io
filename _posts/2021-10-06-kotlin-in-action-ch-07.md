@@ -247,3 +247,64 @@ class Person(
 
 ##### 위임 프로퍼티 컴파일 규칙
 
+* 컴파일러는 위임 프로퍼티에 해당하는 클래스의 인스턴스를 감춰진 프로퍼티에 저장하며 그 감춰진 프로퍼티를 `<delegate>` 라는 이름으로 부른다.
+* 프로퍼티를 표현하기 위해 `KProperty` 타입의 객체를 사용한다. 이 객체를 `<property>` 라고 부른다.
+* 컴파일러는 `class C { val prop: Type by Mydelegate() }` 라는 코드에 대해 아래 코드를 생성한다.
+
+````kotlin
+class C {
+  private val <delegate> = Mydelegate()
+  var prop: Type
+  get() = <delegate>.getValue(this, <property>)
+  set(value: Type) = <delegate>.setValue(this, <property>, value)
+}
+````
+
+##### 프로퍼티 값을 맵에 저장
+
+* 자신의 프로퍼티를 동적으로 정의할 수 있는 객체를 만들 때 위임 프로퍼티를 활용하는 경우가 있다. 그런 객체를 확장 가능한 객체라고 부르기도 한다.
+* 정보를 모두 맵에 저장하되 그 맵을 통해 처리하는 프로퍼티를 통해 필수 정보를 제공하는 방법을 사용할 수 있다.
+
+```kotlin
+class Person {
+  // 추가 정보
+  private val _attributes = hashMapOf<String, String>()
+  fun setAttribute(attrName: String, value: String) { // 추가 데이터를 저장하는 일반적인 API
+    _attributes[attrName] = value
+  }
+  
+  // 필수 정보
+  val name: String
+  get() = _attributes["name"]!! // 특정 프로퍼티를 처리하는 구체적인 개별 API
+}
+```
+
+* 위임 프로퍼티를 활용하게 변경할 수 있다.
+
+```kotlin
+class Person {
+  private val _attributes = hashMapOf<String, String>()
+  fun setAttribute(attrName: String, value: String) {
+    _attributes[attrName] = value
+  }
+  
+  val name: String by _attributes // 표준 라이브러리가 Map, MutableMap에 대해 getValue, setValue 제공하기 때문에 가능
+}
+```
+
+##### 프레임워크에서 위임 프로퍼티 활용
+
+```kotlin
+object Users : IdTable() { // 데이터베이스 테이블에 해당
+  val name = varchar("name", length = 50).index() // 테이블 컬럼에 해당
+  val age = integer("age")
+}
+
+class User(id: EntityID) : Entity(id) { // 테이블에 들어 있는 구체적인 엔티티에 해당
+  var name: String by Users.name // 데이터베이스 name 컬럼에서 가져온다
+  var age: Int by Users.age
+}
+```
+
+* 위 예에서 각 엔티티 속성은 위임 프로퍼티며 컬럼 객체(`Users.name`, `Users.age`)를 위임 객체로 사용한다.
+* 컬럼 클래스 안에 `getValue` 와 `setValue` 메소드를 정의하면 컬럼 프로퍼티를 위임 프로퍼티에 대한 위임 객체로 사용할 수 있고, 값을 가져오거나 세팅할 때 이 메소드들을 사용하게 된다.
