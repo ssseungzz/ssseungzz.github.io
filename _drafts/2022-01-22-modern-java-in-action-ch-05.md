@@ -1,5 +1,5 @@
 ---
-title: "Modern Java in Action 4장; 스트림 소개"
+title: "Modern Java in Action 5장; 스트림 활용"
 categories:
   - Language
 tags:
@@ -9,4 +9,4 @@ toc_label: "Contents"
 toc_sticky: true
 ---
 
-### 4. 스트림 소개
+### 5. 스트림 활용
