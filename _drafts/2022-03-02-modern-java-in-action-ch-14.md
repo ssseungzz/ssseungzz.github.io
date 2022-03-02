@@ -1,5 +1,5 @@
 ---
-title: "Modern Java in Action 13장; 디폴트 메서드"
+title: "Modern Java in Action 14장; 자바 모듈 시스템"
 categories:
   - Language
 tags:
@@ -9,4 +9,4 @@ toc_label: "Contents"
 toc_sticky: true
 ---
 
-### 13. 디폴트 메서드
+### 14. 자바 모듈 시스템
