@@ -32,6 +32,7 @@ static double converter(double x , double f, double b) {
 ```
 * 위와 같은 변환기를 만들면 매번 변환 요소와 기준치를 넣어야 한다. 혹은 각각을 변환하는 메서드를 따로 만드는 방법이 있지만 로직을 재활용할 수 없다.
 * 커링의 개념을 적용해서 한 개의 인수를 갖는 변환 함수를 생산하는 팩토리를 정의할 수 있다.
+
 ```java
 static DoubleUnaryOperator curriedConverter(double f, double b) {
   return (double x) -> x * f + b;
@@ -40,6 +41,7 @@ static DoubleUnaryOperator curriedConverter(double f, double b) {
 DoubleUnaryOperator convertUSDtoGBP = curriedConverter(0.6, 0);
 double gbp = convertUSDtoGBP.applyAsDouble(1000);
 ```
+
 * 커링은 x와 y라는 두 인수를 받는 함수 f를 한 개의 인수를 받는 g라는 함수로 대체하는 기법이다.
   * 이때 g라는 함수 역시 하나의 인수를 받는 함수를 반환한다. 함수 g와 원래 함수 f가 최종적으로 반환하는 값은 같다. 즉, f(x, y) = (g(x))(y)가 성립한다.
   * 이 과정을 일반화할 수 있다. 예를 들어 여섯 개의 인수를 가진 함수를 커리해서 우선 2, 4, 6번째 인수를 받아 5번째 인수를 받는 함수를 반환하고 다시 이 함수는 남은 1,3 번째 인수를 받는 함수를 반환한다. 이와 같은 여러 과정이 끝까지 완료되지 않은 상태를 가리켜 '함수가 부분적으로 적용되었다'라고 말한다.
@@ -79,6 +81,8 @@ class TreeProcessor {
 }
 ```
 * 새로운 노드를 추가할 때 `update` 메서드가 탐색한 트리를 그대로 반환하는 게 가장 쉬운 방법이지만 사용자가 `update` 시 즉석에서 트리를 갱신할 수 있으며 전달한 트리가 그대로 반환된다는 사실, 원래 트리가 비어 있으면 새로운 노드가 반환될 수 있다는 사실을 모두 기억해야 한다.
+
+
 ```java
 public static Tree update(String k, int newVal, Tree t) {
   if (t == null) {
@@ -96,6 +100,7 @@ public static Tree update(String k, int newVal, Tree t) {
   return t;
 }
 ```
+
 * 두 `update` 모두 기존 트리를 변경한다.
 
 ##### 19.2.3 함수형 접근법 사용
@@ -138,6 +143,7 @@ static int head(IntStream numbers) {
 }
 ```
 ###### 3단계: 꼬리 필터링
+
 ```java
 static IntStream tail(IntStream numbers) {
   return numbers.skip(1);
@@ -147,6 +153,7 @@ IntStream numbers = numbers();
 int head = head(numbers);
 IntStream filtered = tail(numbers).filter(n -> n % head != 0);
 ```
+
 ###### 4단계: 재귀적으로 소수 스트림 생성
 ```java
 static IntStream primes(IntStream numbers) {
@@ -272,6 +279,7 @@ public MyList<T> filter(Predicate<T> p) {
 ##### 19.4.1 방문자 디자인 패턴
 * 자바에서는 방문자 디자인 패턴으로 자료형을 언랩할 수 있다. 특히 특정 데이터 형식을 '방문'하는 알고리즘을 캡슐화하는 클래스를 따로 만들 수 있다.
 * 방문자 클래스는 지정된 데이터 형식의 인스턴스를 입력으로 받는다. 그리고 인스턴스의 모든 멤버에 접근한다.
+
 ```java
 class BinOp extends Expr {
   ...
@@ -292,6 +300,7 @@ public class SimplifyExprVisitor {
 ```
 
 ##### 19.4.2 패턴 매칭의 힘
+
 ```scala
 def simplifyExpression(expr: Expr): Expr = expr match {
   case BinOp("+", e, Number(0)) => e
@@ -300,12 +309,15 @@ def simplifyExpression(expr: Expr): Expr = expr match {
   case => expr
 }
 ```
+
+
 * 트리와 비슷한 자료구조를 다룰 때 이와 같은 패턴 매칭을 사용하면 간결하고 명확한 코드를 구현할 수 있다. 특히 컴파일러를 만들거나 비즈니스 규칙 처리 엔진을 만들 때 유용하.
 * 자바 8의 람다를 이용하면 패턴 매칭과 비슷한 코드를 만들 수 있다.
 
 ###### 자바로 패턴 매칭 흉내 내기
 * 자바 8의 람다를 이용한 패턴 매칭 흉내는 단일 수준의 패턴 매칭만 지원한다.
   * 람다를 이용하며 코드에 if-then-else가 없어야 한다. '조건 ? e1 : e2'와 메서드 호출로 if-then-else를 대신할 수 있다.
+
 ```java
 myIf(condition, () -> e1, () -> e2);
 
@@ -313,7 +325,9 @@ static <T> T myIf(boolean b, Supplier<T> truecase, Supplier<T> falsecase) {
   return b ? truecase.get() : falsecase.get();
 }
 ```
+
 * 람다를 이용하면 단일 수준의 패턴 매치을 간단하게 표현할 수 있으므로 여러 개의 if-then-else 구분이 연결되는 상황을 깔끔하게 정리할 수 있다.
+
 
 ```java
 interface TriFunction<S, T, U, R> {
@@ -333,6 +347,7 @@ static <T> T patternMatchExpr(
       defaultcase.get()
 }
 ```
+
 
 ```java
 public static Expr simplify(Expr e) {
@@ -363,6 +378,7 @@ public static Expr simplify(Expr e) {
 }
 ```
 
+
 #### 19.5 기타 정보
 
 ##### 19.5.1 캐싱 또는 기억화
@@ -370,6 +386,7 @@ public static Expr simplify(Expr e) {
   * 캐시에 값이 존재하면 저장된 값을 즉시 반환한다.
   * 존재하지 않으면 메서드를 호출해서 결과를 계산한 다음에 새로운 인수, 결과 쌍을 캐시에 저장하고 결과를 반환한다.
   * 캐싱, 즉 다수의 호출자가 공유하는 자료구조를 갱신하는 기법이므로 순수 함수형 해결 방식은 아니지만 감싼 버전의 코드는 참조 투명성을 유지할 수 있다.
+
 
 ```java
 final Map<Range, Integer> numberOfNodes = new HashMap<>();
@@ -383,6 +400,7 @@ Integer computeNumberOfNodesUsingCache(Range range) {
   return result;
 }
 ```
+
 * `computeNumberOfNodesUsingCache`는 참조 투명성을 갖는다. (`computeNumberOfNodes`도 참조 투명하다는 가정 하에)
   * 하지만 `numberOfNodes`는 공유된 가변 상태며 해시 맵은 동기화되지 않았으므로 스레드 안전성이 없다. 잠금으로 보호되거나 잠금 없이 동시 실행을 지원하는 다른 자료구조를 사용할 수 있지만 성능이 저하될 수 있다. 맵에서 찾는 과정과 인수, 결과 쌍을 맵에 추가하는 동작 사이에서 레이스 컺ㄴ디션이 발생하기 때문이다.
   * 즉, 여러 프로세스가 같은 값을 맵에 추가하기 위해 여러 번 계산하는 일이 발생할 수 있다.
@@ -396,6 +414,8 @@ Integer computeNumberOfNodesUsingCache(Range range) {
 
 ##### 19.5.3 콤비네이터
 * 함수형 프로그래밍에서는 두 함수를 인수로 받아 다른 함수를 반환하는 등 함수를 조합하는 고차원 함수를 많이 사용하게 된다. 이처럼 함수를 조합하는 기능을 콤비네이터라 부른다.
+
+
 ```java
 static <A, B, C> Function<A, C> compose(Function<B, C> g, Function<A, B> f) {
   return x -> g.apply(f.apply(x));
