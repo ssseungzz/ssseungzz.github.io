@@ -56,6 +56,8 @@ double gbp = convertUSDtoGBP.applyAsDouble(1000);
 
 ##### 19.2.2 트리를 사용한 다른 예제
 * 이진 탐색 트리를 사용한다고 가정해 보자.
+
+
 ```java
 class Tree {
   private String key;
@@ -80,7 +82,9 @@ class TreeProcessor {
   }
 }
 ```
+
 * 새로운 노드를 추가할 때 `update` 메서드가 탐색한 트리를 그대로 반환하는 게 가장 쉬운 방법이지만 사용자가 `update` 시 즉석에서 트리를 갱신할 수 있으며 전달한 트리가 그대로 반환된다는 사실, 원래 트리가 비어 있으면 새로운 노드가 반환될 수 있다는 사실을 모두 기억해야 한다.
+
 
 
 ```java
@@ -100,6 +104,7 @@ public static Tree update(String k, int newVal, Tree t) {
   return t;
 }
 ```
+
 
 * 두 `update` 모두 기존 트리를 변경한다.
 
